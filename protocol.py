@@ -203,6 +203,10 @@ class GameIDField(LESignedIntField):
     def i2h(self, pkt, x):
         return self.intToCode(x)
 
+
+def intToVector2(x):
+    pass
+
 class HazelMessage(Packet):
     name = 'Message'
     
@@ -251,7 +255,7 @@ class HazelMessage(Packet):
         elif self.tag == 5:
             return GameData
         elif self.tag == 6:
-            pass
+            return GameDataTo
         elif self.tag == 7:
             pass
         elif self.tag == 8:
@@ -273,6 +277,7 @@ class HazelMessage(Packet):
         super().guess_payload_class(payload)
 
 class AmongUs(Packet):
+    name = 'AmongUs'
     fields_desc = [
         ByteEnumField('type', 0,
         {
@@ -330,6 +335,14 @@ class GameData(Packet):
         PacketListField('Messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
     ]
 
+class GameDataTo(Packet):
+    name = 'Game Data'
+    fields_desc = [
+        GameIDField('game_id', 'ERRO'),
+        PackedUInt32('target_client_id', None),
+        PacketListField('Messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
+    ]
+
 class TaskData(Packet):
     name = 'Task'
     fields_desc = [
@@ -352,11 +365,24 @@ class PlayerData(Packet):
         PacketListField('tasts', None, TaskData, count_from=lambda p:p.task_length)
     ]
 
-class InnerNetObjectType(HazelMessage):
-    name = 'Object'
+class Component(Packet):
     fields_desc = [
-        LEShortField('length', 0),
-        ByteEnumField('tag', 0, {
+        PackedUInt32('net_id', None),
+        LEShortField('len', 0),
+        ByteEnumField('tag', 1, {
+            1: 'Data',
+            2: 'RPC',
+            4: 'Spawn',
+            5: 'Despawn',
+            6: 'SceneChange',
+            7: 'Ready',
+            8: 'ChangeSettings'
+        })
+    ]
+
+class Spawn(Packet):
+    fields_desc = [
+        ByteEnumField('spawn_type', None, {
             0:	'SHIP_STATUS',
             1:	'MEETING_HUD',
             2:	'LOBBY_BEHAVIOUR',
@@ -365,42 +391,49 @@ class InnerNetObjectType(HazelMessage):
             5:	'HEADQUARTERS',
             6:	'PLANET_MAP',
             7:	'APRIL_SHIP_STATUS'
-        })
-    ]
-
-    def guess_payload_class(self, payload):
-        if self.tag == 0:
-            pass
-        elif self.tag == 1:
-            pass
-        elif self.tag == 2:
-            pass
-        elif self.tag == 3:
-            return PlayerData
-        elif self.tag == 4:
-            pass
-        elif self.tag == 5:
-            pass
-        elif self.tag == 6:
-            pass
-        elif self.tag == 7:
-            pass
-        super().guess_payload_class(payload)
-
-class Component(Packet):
-    fields_desc = [
-        PackedUInt32('net_id', None),
-        PacketField('object', None, InnerNetObjectType)
-    ]
-
-class Spawn(Packet):
-    fields_desc = [
-        PackedUInt32('spawn_type', None),
+        }),
         PackedInt32('owner_id', None),
         ByteField('spawn_flags', None),
         PackedUInt32('component_length', 0),
-        PacketListField('Messages', None, Component, count_from=lambda p:p.component_length)
+        #PacketListField('Components', None, Component, count_from=lambda p:p.component_length)
     ]
+
+    def guess_payload_class(self, payload):
+        if self.spawn_type == 0:
+            pass
+        elif self.spawn_type == 1:
+            pass
+        elif self.spawn_type == 2:
+            pass
+        elif self.spawn_type == 3:
+            pass
+        elif self.spawn_type == 4:
+            return PlayerControl
+        elif self.spawn_type == 5:
+            pass
+        elif self.spawn_type == 6:
+            pass
+        elif self.spawn_type == 7:
+            pass
+        super().guess_payload_class(payload)
+
+
+bind_layers(UDP, AmongUs)
+
+def parse(pkt):
+    pkt = IP(pkt)
+    msg = pkt['AmongUs']
+    '''
+    if msg.type in [0, 1]:
+        msg.show2()
+        hexdump(msg)
+    '''
+    try:
+        player = msg[GameDataTo]
+        player.show2()
+        hexdump(player)
+    except Exception as e:
+        pass
 
 if __name__ == '__main__':
     amongUs = AmongUs(type='Normal')/HazelMessage(tag=5)/GameData(game_id='REDSUS')/GameDataTypes(tag=4)/\
