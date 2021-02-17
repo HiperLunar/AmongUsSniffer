@@ -1,4 +1,6 @@
 
+import threading
+import protocol
 import pygame
 
 SIZE = (1430, 800)
@@ -95,6 +97,9 @@ class Game:
                 self.event(event)
             self.tick()
             self.render(self.display)
+    
+    def stop(self):
+        self.running = False
 
 if __name__ == '__main__':
     game = Game()
