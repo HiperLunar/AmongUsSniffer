@@ -294,7 +294,7 @@ class AmongUs(Packet):
         ConditionalField(IntField('client_version', None), lambda p:p.type == 8),
         #ConditionalField(FieldLenField('username_len', 0, length_of='username'), lambda p:p.type == 8),
         #ConditionalField(StrLenField('username', '', length_from=lambda p:p.username_len), lambda p:p.type == 8),
-        PacketListField('Messages', None, HazelMessage, next_cls_cb=lambda pkt,lst,cur,remain: HazelMessage if len(remain)>0 else None)
+        PacketListField('messages', None, HazelMessage, next_cls_cb=lambda pkt,lst,cur,remain: HazelMessage if len(remain)>0 else None)
     ]
 
 class GameDataTypes(HazelMessage):
@@ -332,7 +332,7 @@ class GameData(Packet):
     name = 'Game Data'
     fields_desc = [
         GameIDField('game_id', 'ERRO'),
-        PacketListField('Messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
+        PacketListField('messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
     ]
 
 class GameDataTo(Packet):
@@ -340,7 +340,7 @@ class GameDataTo(Packet):
     fields_desc = [
         GameIDField('game_id', 'ERRO'),
         PackedUInt32('target_client_id', None),
-        PacketListField('Messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
+        PacketListField('messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
     ]
 
 class TaskData(Packet):
@@ -408,7 +408,7 @@ class Spawn(Packet):
         elif self.spawn_type == 3:
             pass
         elif self.spawn_type == 4:
-            return PlayerControl
+            pass
         elif self.spawn_type == 5:
             pass
         elif self.spawn_type == 6:
@@ -434,19 +434,3 @@ def parse(pkt):
         hexdump(player)
     except Exception as e:
         pass
-
-if __name__ == '__main__':
-    amongUs = AmongUs(type='Normal')/HazelMessage(tag=5)/GameData(game_id='REDSUS')/GameDataTypes(tag=4)/\
-        Spawn(spawn_type=12, owner_id=13, spawn_flags=0, component_length=1)/Component(net_id=42)/\
-        InnerNetObjectType(tag=3)/PlayerData(
-            player_id=13,
-            name='RED',
-            color_id=0,
-            flags=2,
-        )/TaskData(task_id=42, is_completed=0)
-    amongUs.show2()
-    hexdump(amongUs)
-    b = bytes(amongUs)
-    amongUs2 = AmongUs(b)
-    amongUs2.show2()
-    hexdump(amongUs2)
