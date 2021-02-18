@@ -28,12 +28,9 @@ def listen(packet):
                             for player in playersList.players:
                                 game.setGameDataById(player)
                         elif spawn.spawn_type == 4: # PLAYER_CONTROL
-                            spawn.show2()
-                            x = PlayerControl(bytes(spawn.components[0].payload))
-                            x.show2()
-                            #playerControl = PlayerControl(bytes(spawn.components[0].payload))
-                            #networkTransform = NetworkTransform(bytes(spawn.components[2].payload))
-                            #game.spawnPlayer(PlayerControl, networkTransform)
+                            playerControl = PlayerControl(bytes(spawn.components[0].payload))
+                            networkTransform = NetworkTransform(bytes(spawn.components[2].payload))
+                            game.spawnPlayer(playerControl, networkTransform)
 
     except Exception as e:
         print(e)

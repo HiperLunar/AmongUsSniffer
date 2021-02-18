@@ -67,11 +67,12 @@ class Game:
         self.gameData[id] = data
     
     def spawnPlayer(self, playerControl, networkTransform):
+        playerControl.show2()
         for obj in self.objects:
             if obj[0].player_id == playerControl.player_id:
                 return False
         self.objects.append((playerControl, networkTransform))
-        print(self.objects[0].player_id)
+        print(self.objects)
 
     def run(self):
         pygame.init()
