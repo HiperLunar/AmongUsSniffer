@@ -21,6 +21,14 @@ def listen(packet):
             if 'Game Data' in msg:
                 gameData = msg['Game Data']
                 for data in gameData.messages:
+                    if RPC in data:
+                        rpc = data[RPC]
+                        if rpc.RPC_call_id == 3:
+                            rpc.show()
+                            impostors_id = rpc.payload.impostors_id
+                            for i in impostors_id:
+                                gameData = game.getGameDataById(i)
+                                gameData.show()
                     if Spawn in data:
                         spawn = data[Spawn]
                         if spawn.spawn_type == 3: # GAME_DATA

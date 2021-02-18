@@ -315,7 +315,7 @@ class GameDataTypes(HazelMessage):
         if self.tag == 1:
             pass
         elif self.tag == 2:
-            pass
+            return RPC
         elif self.tag == 4:
             return Spawn
         elif self.tag == 5:
@@ -342,6 +342,57 @@ class GameDataTo(Packet):
         PackedUInt32('target_client_id', None),
         PacketListField('messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
     ]
+
+class RPC(Packet):
+    name = 'RPC'
+    fields_desc = [
+        PackedUInt32('net_id', 0),
+        ByteEnumField('RPC_call_id', 0, {
+            0: 'PlayAnimation',
+            1: 'CompleteTask',
+            2: 'SyncSettings',
+            3: 'SetInfected',
+            4: 'Exiled',
+            5: 'CheckName',
+            6: 'SetName',
+            7: 'CheckColor',
+            8: 'SetColor',
+            9: 'SetHat',
+            10: 'SetSkin',
+            11: 'ReportDeadBody',
+            12: 'MurderPlayer',
+            13: 'SendChat',
+            14: 'StartMeeting',
+            15: 'SetScanner',
+            16: 'SendChatNote',
+            17: 'SetPet',
+            18: 'SetStartCounter',
+            19: 'EnterVent',
+            20: 'ExitVent',
+            21: 'SnapTo',
+            22: 'Close',
+            23: 'VotingComplete',
+            24: 'CastVote',
+            25: 'ClearVote',
+            26: 'AddVote',
+            27: 'CloseDoorsOfType',
+            28: 'RepairSystem',
+            29: 'SetTasks',
+            30: 'UpdateGameData'
+        })
+    ]
+
+    class SetInfected(Packet):
+        name = 'set infected'
+        fields_desc = [
+            PackedUInt32('impostor_length', 0),
+            FieldListField('impostors_id', [0], ByteField('', 0), count_from=lambda p:p.impostor_length)
+        ]
+    
+    def guess_payload_class(self, payload):
+        if self.RPC_call_id == 3:
+            return self.SetInfected
+        super().guess_payload_class(payload)
 
 class Player(Packet):
         class TaskData(Packet):
