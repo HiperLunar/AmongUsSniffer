@@ -203,10 +203,6 @@ class GameIDField(LESignedIntField):
     def i2h(self, pkt, x):
         return self.intToCode(x)
 
-
-def intToVector2(x):
-    pass
-
 class HazelMessage(Packet):
     name = 'Message'
     
@@ -313,7 +309,7 @@ class GameDataTypes(HazelMessage):
 
     def guess_payload_class(self, payload):
         if self.tag == 1:
-            pass
+            return Data
         elif self.tag == 2:
             return RPC
         elif self.tag == 4:
@@ -341,6 +337,12 @@ class GameDataTo(Packet):
         GameIDField('game_id', 'ERRO'),
         PackedUInt32('target_client_id', None),
         PacketListField('messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
+    ]
+
+class Data(Packet):
+    name = 'Data'
+    fields_desc = [
+        PackedUInt32('net_id', 0)
     ]
 
 class RPC(Packet):
@@ -406,7 +408,20 @@ class Player(Packet):
             ByteField('player_id', 0),
             FieldLenField("name_length", None, length_of="z'", fmt='!B'),
             StrLenField("username", "ERROR", length_from=lambda pkt:pkt.name_length),
-            PackedUInt32('color_id', 0),
+            ByteEnumField('color_id', 0, {
+                0:  'Red',
+                1:  'Blue',
+                2:  'Green',
+                3:  'Pink',
+                4:  'Orange',
+                5:  'Yellow',
+                6:  'Grey',
+                7:  'White',
+                8:  'Purple',
+                9:  'Brown',
+                10: 'Cyan',
+                11: 'Light_green'
+            }),
             PackedUInt32('hat_id', 0),
             PackedUInt32('pet_id', 0),
             PackedUInt32('skin_id', 0),

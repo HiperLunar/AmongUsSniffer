@@ -2,8 +2,11 @@
 import threading
 import protocol
 import pygame
+import scale
+from importlib import reload
 
-SIZE = (1430, 800)
+SIZE = (1072, 600)
+PLAYER_SHEET = pygame.image.load('Spritesheet.png')
 
 class Task:
     pass
@@ -23,6 +26,93 @@ COLORS = (
 		(80,  240, 57 ), # 11: Light_green
     )
 
+class Vector2:
+    rangeX = (-40.0, +40.0)
+    rangeY = (-40.0, +40.0)
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    @staticmethod
+    def from_int(x, y):
+        x /= 65535
+        y /= 65535
+        if x < 0:
+            x = 0.0
+        elif x > 1.0:
+            x = 1.0
+        if y < 0:
+            y = 0.0
+        elif y > 1.0:
+            y = 1.0
+        
+        x = Vector2.lerp(Vector2.rangeX, x)
+        y = Vector2.lerp(Vector2.rangeY, y)
+        return Vector2(x, y)
+    
+    @staticmethod
+    def lerp(frange, value):
+        return frange[0] + ((frange[1]-frange[0])*value)
+
+    def to_int(self):
+        pass
+
+    def __iter__(self):
+        return (self.x, self.y)
+    
+    def get(self):
+        return (self.x, self.y)
+
+class GameObject:
+    def __init__(self, components):
+        self.components = components
+    
+    def render(self, surface): pass
+
+class Player(GameObject):
+    IMAGE_RECT = pygame.Rect(-8, -48, 78, 103)
+
+    def __init__(self, components):
+        self.image = pygame.Surface(self.IMAGE_RECT.size)
+        self.image.blit(PLAYER_SHEET, self.IMAGE_RECT)
+        self.image = pygame.transform.scale(self.image, (20, 26))
+        self.myFont = pygame.font.SysFont('Comic Sans MS', 30)
+        super().__init__(components)
+
+    def getControl(self):
+        return protocol.PlayerControl(bytes(self.components[0].payload))
+    
+    def getPysics(self):
+        return bytes(self.components[1].payload)
+    
+    def getTransform(self):
+        return protocol.NetworkTransform(bytes(self.components[2].payload))
+    
+    def getPos(self):
+        transform = self.getTransform()
+        return Vector2.from_int(transform.x_pos, transform.y_pos)
+    
+    def getVel(self):
+        transform = self.getTransform()
+        return Vector2.from_int(transform.x_vel, transform.y_vel)
+
+    def getPlayerId(self):
+        return self.getControl().player_id
+
+    def getIds(self):
+        return (component.net_id for component in self.components)
+    
+    def render(self, surface: pygame.Surface, playerData=None):
+        pos = self.getPos().get()
+        reload(scale)
+        pos = (scale.x*pos[0] + scale.x0, scale.y*pos[1] + scale.y0)
+        surface.blit(self.image, pos)
+        if type(playerData) == protocol.Player:
+            name = playerData.username.decode('utf8')
+            text = self.myFont.render(name, True, (0,0,0))
+            surface.blit(text, (pos[0]-10, pos[1]-10))
+
 class Game:
     __slots__ = (
         'display',
@@ -32,28 +122,31 @@ class Game:
     )
 
     gameData = [None for x in range(10)]
-    playerControl = []
 
     def  __init__(self):
         self.background = pygame.transform.scale(pygame.image.load('Skeld.png'), SIZE)
         self.running = False
-        self.objects = []
+        self.reset()
 
     def tick(self):
-        pass
+        isPressed = pygame.mouse.get_pressed()
+        if isPressed[0]:
+            print(pygame.mouse.get_pos())
 
     def render(self, surface: pygame.Surface):
         surface.blit(self.background, (0,0))
-        for object in self.objects:
-            object.render(surface)
+        for obj in self.objects:
+            if type(obj) == Player:
+                id = obj.getPlayerId()
+                data = self.getGameDataById(id)
+                obj.render(surface, playerData=data)
+            else:
+                obj.render(surface)
         pygame.display.flip()
 
     def event(self, event):
         if event.type == pygame.QUIT:
             self.running = False
-    
-    def createPlayer(self, player):
-        self.objects.append(player)
 
     def getGameDataById(self, id):
         return self.gameData[id]
@@ -66,14 +159,53 @@ class Game:
         id = data.player_id
         self.gameData[id] = data
     
-    def spawnPlayer(self, playerControl, networkTransform):
+    def getGameDataByName(self, name):
+        for player in self.gameData:
+            if player:
+                if player.username == name:
+                    return player
+
+    def getComponentById(self, id):
         for obj in self.objects:
-            if obj[0].player_id == playerControl.player_id:
-                return False
-        self.objects.append((playerControl, networkTransform))
+            for c in obj.components:
+                if c.net_id == id:
+                    return c
+    
+    def setComponentById(self, id, component):
+        for obj in self.objects:
+            for c in range(len(obj.components)):
+                if obj.components[c].net_id == id:
+                    obj.components[c] = component
+
+    def setData(self, data):
+        component = self.getComponentById(data.net_id)
+        if component is None:
+            return False
+        component.length = len(data.payload)
+        component.payload = data.payload
+        return True
+
+
+    def spawn(self, components):
+        self.objects.append(GameObject(components))
+
+    def spawnPlayer(self, components):
+        playerControl = protocol.PlayerControl(bytes(components[0].payload))
+        for obj in self.objects:
+            if type(obj) == Player:
+                if obj.getControl().player_id == playerControl.player_id:
+                    return False
+        self.objects.append(Player(components))
+        print('Player Spawned!!!')
+        return True
+
+    def reset(self):
+        self.gameData = [None for x in range(10)]
+        self.objects = []
 
     def run(self):
         pygame.init()
+        pygame.font.init()
         self.display = pygame.display.set_mode(SIZE)
 
         self.running = True
@@ -82,9 +214,11 @@ class Game:
                 self.event(event)
             self.tick()
             self.render(self.display)
+        print('END!')
     
     def stop(self):
         self.running = False
+        print('Stopping...')
 
 if __name__ == '__main__':
     game = Game()
