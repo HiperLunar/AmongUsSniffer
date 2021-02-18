@@ -352,7 +352,7 @@ class Player(Packet):
             ]
         name = 'Player'
         fields_desc = [
-            ByteField('player_id', None),
+            ByteField('player_id', 0),
             FieldLenField("name_length", None, length_of="z'", fmt='!B'),
             StrLenField("username", "ERROR", length_from=lambda pkt:pkt.name_length),
             PackedUInt32('color_id', 0),
@@ -373,50 +373,22 @@ class PlayerData(Packet):
         PacketListField('players', None, Player, count_from=lambda p:p.players_length)
     ]
 
-    def getfield(self, pkt, s):
-        c = len_pkt = cls = None
-        if self.length_from is not None:
-            len_pkt = self.length_from(pkt)
-        elif self.count_from is not None:
-            c = self.count_from(pkt)
-        if self.next_cls_cb is not None:
-            cls = self.next_cls_cb(pkt, [], None, s)
-            c = 1
+class PlayerControl(Packet):
+    name = 'PlayerControl'
+    fields_desc = [
+        ByteField('isNew', 0),
+        ByteField('player_id', 0)
+    ]
 
-        lst = []
-        ret = b""
-        remain = s
-        if len_pkt is not None:
-            remain, ret = s[:len_pkt], s[len_pkt:]
-        while remain:
-            if c is not None:
-                if c <= 0:
-                    break
-                c -= 1
-            try:
-                if cls is not None:
-                    p = cls(remain)
-                else:
-                    p = self.m2i(pkt, remain)
-            except Exception:
-                if conf.debug_dissector:
-                    raise
-                p = conf.raw_layer(load=remain)
-                remain = b""
-            else:
-                if conf.padding_layer in p:
-                    pad = p[conf.padding_layer]
-                    remain = pad.load
-                    del(pad.underlayer.payload)
-                    if self.next_cls_cb is not None:
-                        cls = self.next_cls_cb(pkt, lst, p, remain)
-                        if cls is not None:
-                            c = 0 if c is None else c
-                            c += 1
-                else:
-                    remain = b""
-            lst.append(p)
-        return remain + ret, lst
+class NetworkTransform(Packet):
+    name = 'Position'
+    fields_desc = [
+        LEShortField('last_sequence_id', None),
+        LEShortField('x_pos', None),
+        LEShortField('y_pos', None),
+        LEShortField('x_vel', None),
+        LEShortField('y_vel', None)
+    ]
 
 class Component(HazelMessage):
     name = 'Component'
@@ -471,7 +443,6 @@ class Spawn(Packet):
             pass
         super().guess_payload_class(payload)
 
-
 bind_layers(UDP, AmongUs)
 
 def parse(pkt):
@@ -488,8 +459,3 @@ def parse(pkt):
         hexdump(player)
     except Exception as e:
         pass
-
-if __name__ == '__main__':
-    data = b'\x06\x02\x02O \x08R\x00\x00\x00\x00\x03\x06player\x003\x00\x00\x00\x00\x01\x08mr chees\t)\x00\x00\x00\x00\x04\x00\x00\x06\x00\x07\x00\x00\x05\x00\x00&\x00\x00\x00\x00\x00\x07Crowley\x06?\x02\x00\x00\x00'
-    playerList = PlayerData(data)
-    playerList.show2()

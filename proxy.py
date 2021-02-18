@@ -22,12 +22,18 @@ def listen(packet):
                 gameData = msg['Game Data']
                 for data in gameData.messages:
                     if Spawn in data:
-                        spawn = gameData[Spawn]
-                        if spawn.spawn_type == 'GAME_DATA':
-                            pass
-                        elif spawn.spawn_type == 'PLAYER_CONTROL':
-                            pass
-                        data.show2()
+                        spawn = data[Spawn]
+                        if spawn.spawn_type == 3: # GAME_DATA
+                            playersList = PlayerData(bytes(spawn.components[0].payload))
+                            for player in playersList.players:
+                                game.setGameDataById(player)
+                        elif spawn.spawn_type == 4: # PLAYER_CONTROL
+                            spawn.show2()
+                            x = PlayerControl(bytes(spawn.components[0].payload))
+                            x.show2()
+                            #playerControl = PlayerControl(bytes(spawn.components[0].payload))
+                            #networkTransform = NetworkTransform(bytes(spawn.components[2].payload))
+                            #game.spawnPlayer(PlayerControl, networkTransform)
 
     except Exception as e:
         print(e)
