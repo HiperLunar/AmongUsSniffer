@@ -343,32 +343,86 @@ class GameDataTo(Packet):
         PacketListField('messages', None, GameDataTypes, next_cls_cb=lambda pkt,lst,cur,remain: GameDataTypes if len(remain)>0 else None)
     ]
 
-class TaskData(Packet):
-    name = 'Task'
-    fields_desc = [
-        PackedUInt32('task_id', 0),
-        ByteField('is_completed', 0)
-    ]
+class Player(Packet):
+        class TaskData(Packet):
+            name = 'Task'
+            fields_desc = [
+                PackedUInt32('task_id', 0),
+                ByteField('is_completed', 0)
+            ]
+        name = 'Player'
+        fields_desc = [
+            ByteField('player_id', None),
+            FieldLenField("name_length", None, length_of="z'", fmt='!B'),
+            StrLenField("username", "ERROR", length_from=lambda pkt:pkt.name_length),
+            PackedUInt32('color_id', 0),
+            PackedUInt32('hat_id', 0),
+            PackedUInt32('pet_id', 0),
+            PackedUInt32('skin_id', 0),
+            ByteField('flags', 0),
+            FieldLenField('task_length', 0, count_of='tasks', fmt='!B'),
+            PacketListField('tasks', None, TaskData, count_from=lambda p:p.task_length)
+        ]
+        def extract_padding(self, s):
+            return "", s
 
 class PlayerData(Packet):
-    name = 'Player'
+    name = 'Player Data'
     fields_desc = [
-        ByteField('player_id', None),
-        FieldLenField("name_length", None, length_of="name", fmt='!B'),
-        StrLenField("name", "", length_from=lambda pkt:pkt.name_length),
-        PackedUInt32('color_id', 0),
-        PackedUInt32('hat_id', 0),
-        PackedUInt32('pet_id', 0),
-        PackedUInt32('skin_id', 0),
-        ByteField('flags', 0),
-        FieldLenField('task_length', 0, count_of='tasks', fmt='!B'),
-        PacketListField('tasts', None, TaskData, count_from=lambda p:p.task_length)
+        FieldLenField('players_length', None, fmt='!B', count_of='players'),
+        PacketListField('players', None, Player, count_from=lambda p:p.players_length)
     ]
 
-class Component(Packet):
+    def getfield(self, pkt, s):
+        c = len_pkt = cls = None
+        if self.length_from is not None:
+            len_pkt = self.length_from(pkt)
+        elif self.count_from is not None:
+            c = self.count_from(pkt)
+        if self.next_cls_cb is not None:
+            cls = self.next_cls_cb(pkt, [], None, s)
+            c = 1
+
+        lst = []
+        ret = b""
+        remain = s
+        if len_pkt is not None:
+            remain, ret = s[:len_pkt], s[len_pkt:]
+        while remain:
+            if c is not None:
+                if c <= 0:
+                    break
+                c -= 1
+            try:
+                if cls is not None:
+                    p = cls(remain)
+                else:
+                    p = self.m2i(pkt, remain)
+            except Exception:
+                if conf.debug_dissector:
+                    raise
+                p = conf.raw_layer(load=remain)
+                remain = b""
+            else:
+                if conf.padding_layer in p:
+                    pad = p[conf.padding_layer]
+                    remain = pad.load
+                    del(pad.underlayer.payload)
+                    if self.next_cls_cb is not None:
+                        cls = self.next_cls_cb(pkt, lst, p, remain)
+                        if cls is not None:
+                            c = 0 if c is None else c
+                            c += 1
+                else:
+                    remain = b""
+            lst.append(p)
+        return remain + ret, lst
+
+class Component(HazelMessage):
+    name = 'Component'
     fields_desc = [
-        PackedUInt32('net_id', None),
-        LEShortField('len', 0),
+        PackedUInt32('net_id', 0),
+        LEShortField('length', 0),
         ByteEnumField('tag', 1, {
             1: 'Data',
             2: 'RPC',
@@ -395,7 +449,7 @@ class Spawn(Packet):
         PackedInt32('owner_id', None),
         ByteField('spawn_flags', None),
         PackedUInt32('component_length', 0),
-        #PacketListField('Components', None, Component, count_from=lambda p:p.component_length)
+        PacketListField('components', None, Component, count_from=lambda p:p.component_length)
     ]
 
     def guess_payload_class(self, payload):
@@ -434,3 +488,8 @@ def parse(pkt):
         hexdump(player)
     except Exception as e:
         pass
+
+if __name__ == '__main__':
+    data = b'\x06\x02\x02O \x08R\x00\x00\x00\x00\x03\x06player\x003\x00\x00\x00\x00\x01\x08mr chees\t)\x00\x00\x00\x00\x04\x00\x00\x06\x00\x07\x00\x00\x05\x00\x00&\x00\x00\x00\x00\x00\x07Crowley\x06?\x02\x00\x00\x00'
+    playerList = PlayerData(data)
+    playerList.show2()
