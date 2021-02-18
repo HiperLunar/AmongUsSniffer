@@ -8,25 +8,8 @@ SIZE = (1430, 800)
 class Task:
     pass
 
-class Player:
-    __slots__ = [
-        'id',
-        'name',
-        'color',
-        'hat',
-        'pet',
-        'skin',
-        'isDisconnected',
-        'isImpostor',
-        'isDead',
-        'tasks',
-        'x',
-        'y'
-    ]
-    floatRangeX = (-40.0, 40.0)
-    floatRangeY = (-40.0, 40.0)
 
-    COLORS = (
+COLORS = (
         (198, 17,  17 ), # Red
         (19,  46,  210), # Blue
         (17,  128, 45 ), # Green
@@ -41,23 +24,6 @@ class Player:
 		(80,  240, 57 ), # Light_green
     )
 
-    def __init__(self, **kwargs):
-        self.id = kwargs.get('id')
-        self.name = kwargs.get('name')
-        self.color = (kwargs.get('color') or 0)
-        self.hat = kwargs.get('hat')
-        self.pet = kwargs.get('pet')
-        self.skin = kwargs.get('skin')
-        self.isDisconnected = (kwargs.get('isDisconnected') or False)
-        self.isImpostor = (kwargs.get('isImpostor') or False)
-        self.isDead = (kwargs.get('isDead') or False)
-        self.tasks = kwargs.get('tasks')
-        self.x = (kwargs.get('x') or 0)
-        self.y = (kwargs.get('y') or 0)
-    
-    def render(self, surface: pygame.Surface):
-        pygame.draw.circle(surface, self.COLORS[self.color], (self.x, self.y), 20)
-
 class Game:
     __slots__ = (
         'display',
@@ -65,6 +31,8 @@ class Game:
         'running',
         'objects'
     )
+
+    gameData = []
 
     def  __init__(self):
         self.background = pygame.transform.scale(pygame.image.load('Skeld.png'), SIZE)
@@ -86,6 +54,12 @@ class Game:
     
     def createPlayer(self, player):
         self.objects.append(player)
+
+    def getGameDataById(self, id):
+        for obj in self.objects:
+            if type(obj) == GameData:
+                if obj.id == id:
+                    return obj
 
     def run(self):
         pygame.init()

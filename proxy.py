@@ -20,11 +20,14 @@ def listen(packet):
         for msg in amongUsMsg.messages:
             if 'Game Data' in msg:
                 gameData = msg['Game Data']
-                #gameData.show2()
-                print(type(gameData))
-                print(type(gameData.messages))
-                #for data in gameData.messages:
-                #    data.show2()
+                for data in gameData.messages:
+                    if Spawn in data:
+                        spawn = gameData[Spawn]
+                        if spawn.spawn_type == 'GAME_DATA':
+                            pass
+                        elif spawn.spawn_type == 'PLAYER_CONTROL':
+                            pass
+                        data.show2()
 
     except Exception as e:
         print(e)
