@@ -216,13 +216,15 @@ class Game:
                     self.event(event)
                 self.tick()
                 self.render(self.display)
+            except KeyboardInterrupt:
+                self.stop()
+                raise KeyboardInterrupt
             except Exception as e:
                 print(e)
         print('END!')
     
     def stop(self):
         self.running = False
-        print('Stopping...')
 
 if __name__ == '__main__':
     game = Game()
