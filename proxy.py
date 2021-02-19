@@ -50,7 +50,10 @@ class Proxy:
             #get_queue()
             pkt = IP(packet.get_payload())
             for conn in self.sniffers:
-                conn.send(bytes(pkt[UDP].payload))
+                try:
+                    conn.send(bytes(pkt[UDP].payload))
+                except BrokenPipeError:
+                    self.sniffers.remove(conn)
         except KeyboardInterrupt:
             raise KeyboardInterrupt
 
@@ -58,7 +61,6 @@ class Proxy:
             print('ERROR')
             traceback.print_exc()
             print(e)
-            raise KeyboardInterrupt
         packet.accept()
 
 if __name__ == '__main__':
