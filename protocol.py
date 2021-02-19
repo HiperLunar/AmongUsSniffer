@@ -383,16 +383,66 @@ class RPC(Packet):
             30: 'UpdateGameData'
         })
     ]
-
+    '''
+    class PlayAnimation(Packet):
+        name = 'Animation'
+        fields_desc = [ByteEnumField('task_id', 0, {
+            0:	'SUBMIT_SCAN',
+            1:	'PRIME_SHIELDS',
+            2:	'FUEL_ENGINES',
+            3:	'CHART_COURSE',
+            4:	'START_REACTOR',
+            5:	'SWIPE_CARD',
+            6:	'CLEAR_ASTEROIDS',
+            7:	'UPLOAD_DATA',
+            8:	'INSPECT_SAMPLE',
+            9:	'EMPTY_CHUTE',
+            10:	'EMPTY_GARBAGE',
+            11:	'ALIGN_ENGINE_OUTPUT',
+            12:	'FIX_WIRING',
+            13:	'CALIBRATE_DISTRIBUTOR',
+            14:	'DIVERT_POWER',
+            15:	'UNLOCK_MANIFOLDS',
+            16:	'RESET_REACTOR',
+            17:	'FIX_LIGHTS',
+            18:	'CLEAN_O2_FILTER',
+            19:	'FIX_COMMS',
+            20:	'RESTORE_O2',
+            21:	'STABILIZE_STEERING',
+            22:	'ASSEMBLE_ARTIFACT',
+            23:	'SORT_SAMPLES',
+            24:	'MEASURE_WEATHER',
+            25:	'ENTER_ID_CODE',
+            26:	'BUY_BEVERAGE',
+            27:	'PROCESS_DATA',
+            28:	'RUN_DIAGNOSTICS',
+            29:	'WATER_PLANTS',
+            30:	'MONITOR_O2',
+            31:	'STORE_ARTIFACTS',
+            32:	'FILL_CANISTERS',
+            33:	'ACTIVATE_WEATHER_NODES',
+            34:	'INSERT_KEYS',
+            35:	'RESET_SEISMIC',
+            36:	'SCAN_BOARDING_PASS',
+            37:	'OPEN_WATERWAYS',
+            38:	'REPLACE_WATER_JUG',
+            39:	'REPAIR_DRILL',
+            40:	'ALIGN_TELESCOPE',
+            41:	'RECORD_TEMPERATURE',
+            42:	'REBOOT_WIFI'
+        })]
+    '''
     class SetInfected(Packet):
         name = 'set infected'
         fields_desc = [
             PackedUInt32('impostor_length', 0),
             FieldListField('impostors_id', [0], ByteField('', 0), count_from=lambda p:p.impostor_length)
         ]
-    
+
     def guess_payload_class(self, payload):
-        if self.RPC_call_id == 3:
+        if self.RPC_call_id == 0:
+            pass
+        elif self.RPC_call_id == 3:
             return self.SetInfected
         super().guess_payload_class(payload)
 

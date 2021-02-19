@@ -3,10 +3,12 @@ import threading
 import protocol
 import pygame
 import scale
-from importlib import reload
+#from importlib import reload
+import queue
 
 SIZE = (1072, 600)
 PLAYER_SHEET = pygame.image.load('Spritesheet.png')
+PLAYER_SHEET.set_colorkey((255,255,255))
 
 class Task:
     pass
@@ -75,9 +77,10 @@ class Player(GameObject):
 
     def __init__(self, components):
         self.image = pygame.Surface(self.IMAGE_RECT.size)
-        self.image.blit(PLAYER_SHEET, self.IMAGE_RECT)
+        self.image.blit(PLAYER_SHEET.convert_alpha(), self.IMAGE_RECT)
+        self.image = self.image.convert_alpha()
         self.image = pygame.transform.scale(self.image, (20, 26))
-        self.myFont = pygame.font.SysFont('Comic Sans MS', 30)
+        self.myFont = pygame.font.SysFont('Comic Sans MS', 24)
         super().__init__(components)
 
     def getControl(self):
@@ -101,37 +104,29 @@ class Player(GameObject):
         return self.getControl().player_id
 
     def getIds(self):
-        return (component.net_id for component in self.components)
+        return [component.net_id for component in self.components]
     
     def render(self, surface: pygame.Surface, playerData=None):
         pos = self.getPos().get()
-        reload(scale)
         pos = (scale.x*pos[0] + scale.x0, scale.y*pos[1] + scale.y0)
         surface.blit(self.image, pos)
         if type(playerData) == protocol.Player:
             name = playerData.username.decode('utf8')
-            text = self.myFont.render(name, True, (0,0,0))
+            if playerData.flags & 2:
+                text = self.myFont.render(name, True, (255,0,0))
+            else:
+                text = self.myFont.render(name, True, (0,0,0))
             surface.blit(text, (pos[0]-10, pos[1]-10))
 
 class Game:
-    __slots__ = (
-        'display',
-        'background',
-        'running',
-        'objects'
-    )
-
-    gameData = [None for x in range(10)]
-
     def  __init__(self):
         self.background = pygame.transform.scale(pygame.image.load('Skeld.png'), SIZE)
         self.running = False
         self.reset()
+        self.queue = queue.Queue()
 
     def tick(self):
-        isPressed = pygame.mouse.get_pressed()
-        if isPressed[0]:
-            print(pygame.mouse.get_pos())
+        pass
 
     def render(self, surface: pygame.Surface):
         surface.blit(self.background, (0,0))
@@ -147,6 +142,11 @@ class Game:
     def event(self, event):
         if event.type == pygame.QUIT:
             self.running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_g:
+                self.queue.put((1, b'\x0a'))
+            if event.key == pygame.K_s:
+                self.queue.put((1, b'\x00'))
 
     def getGameDataById(self, id):
         return self.gameData[id]
@@ -202,6 +202,7 @@ class Game:
     def reset(self):
         self.gameData = [None for x in range(10)]
         self.objects = []
+        print('Reseted!')
 
     def run(self):
         pygame.init()
@@ -210,10 +211,13 @@ class Game:
 
         self.running = True
         while self.running:
-            for event in pygame.event.get():
-                self.event(event)
-            self.tick()
-            self.render(self.display)
+            try:
+                for event in pygame.event.get():
+                    self.event(event)
+                self.tick()
+                self.render(self.display)
+            except Exception as e:
+                print(e)
         print('END!')
     
     def stop(self):
