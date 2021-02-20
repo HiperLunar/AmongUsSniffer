@@ -145,8 +145,10 @@ class Game:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_g:
                 self.queue.put((1, b'\x0a'))
-            if event.key == pygame.K_s:
-                self.queue.put((1, b'\x00'))
+            if event.key == pygame.K_a:
+                self.queue.put((1, b'\x06'))
+            if event.key == pygame.K_p:
+                self.queue.put((1, b'\x01'))
 
     def getGameDataById(self, id):
         return self.gameData[id]

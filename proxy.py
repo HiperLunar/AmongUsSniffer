@@ -8,18 +8,22 @@ from netfilterqueue import NetfilterQueue
 import threading
 import socket
 
-ADDRESS = ('', 21023)
+OUT_ADDRESS = ('', 21023)
+IN_ADDRESS = ('', 21123)
 
 class Proxy:
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind(ADDRESS)
+        self.socket.bind(OUT_ADDRESS)
         self.socket.listen(1)
+
+        self.ips = []
 
         self.sniffers = []
 
         self.accept_thread = threading.Thread(target=self.accept)
+        self.sender_thread = threading.Thread(target=self.sender)
 
         self.running = False
     
@@ -39,29 +43,34 @@ class Proxy:
     def stop(self):
         self.running = False
         self.accept_thread.join()
+        self.sender.join()
 
     def accept(self):
         while self.running:
             conn, addr = self.socket.accept()
+            conn.settimeout(0.1)
             self.sniffers.append(conn)
     
     def listen(self, packet):
-        try:
-            #get_queue()
-            pkt = IP(packet.get_payload())
+        pkt = IP(packet.get_payload())
+        for conn in self.sniffers:
+            try:
+                conn.send(bytes(pkt[UDP].payload))
+            except BrokenPipeError:
+                self.sniffers.remove(conn)
+        packet.accept()
+    
+    def sender(self):
+        while self.running:
             for conn in self.sniffers:
                 try:
-                    conn.send(bytes(pkt[UDP].payload))
-                except BrokenPipeError:
-                    self.sniffers.remove(conn)
-        except KeyboardInterrupt:
-            raise KeyboardInterrupt
+                    data = conn.recv(2048)
+                    if data:
+                        send(IP(data))
+                except socket.timeout:
+                    pass
+                
 
-        except Exception as e:
-            print('ERROR')
-            traceback.print_exc()
-            print(e)
-        packet.accept()
 
 if __name__ == '__main__':
     proxy = Proxy()
