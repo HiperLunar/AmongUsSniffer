@@ -54,6 +54,17 @@ class Sniffer:
                 traceback.print_exc()
         print('Disconnected! Stoping sniffer...')
         self.stop()
+
+    def get_queue():
+        if game.queue.empty():
+            return
+        else:
+            i = game.queue.get()
+        if i[0] == 1:
+            fake = fakeMessage.FakeMessager(server, client,
+                game_id=game.id,
+                net_id=game.objects[0].getIds()[0])
+            fake.playAnimation(i[1])
     
     def parse(self, pkt):
         try:
